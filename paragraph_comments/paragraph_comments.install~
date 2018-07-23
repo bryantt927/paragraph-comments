@@ -1,0 +1,36 @@
+ <?php
+use Drupal\Core\Database\Database;
+/**
+ *
+ * @see hook_install()
+ *
+ */
+
+/** We don't need this anymore.  Creating an extra Comment field on the content type to be used.  Call it field_corrections.  See ReadMe file.
+function paragraph_comments_install() {
+
+$spec = array(
+    'type' => 'int',
+    'unsigned' => TRUE,
+    'not null' => TRUE,
+    'default' => 0,
+    'initial' => 0,
+    'description' => "The number of the paragraph on the node for which the comment is intended.",
+  );
+
+  //Create an index for the field 'paragraph_id' named 'paragraph_id'.
+ // $keys['indexes'] = array(
+   // 'paragraph_id' => array('paragraph_id')
+  //);
+ // watchdog('Made it to update', 'Install function in paragraph_comments ran ');
+  $schema = Database::getConnection()->schema();
+  $schema->addfield('comment_field_data', 'paragraph_id', $spec);
+}
+
+function paragraph_comments_uninstall() {
+  $schema = Database::getConnection()->schema();
+  $schema->dropField('comment_field_data', 'paragraph_id');
+
+}
+
+*/

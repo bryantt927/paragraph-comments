@@ -1,0 +1,11 @@
+paragraph_comments:
+  version: 1.x
+  css:
+    theme:
+      css/paragraph_comments.css: {}
+  js:
+    js/paragraph_comments.js: {}
+  dependencies:
+    - core/jquery
+    - core/drupalSettings
+    - core/drupal.dialog.ajax

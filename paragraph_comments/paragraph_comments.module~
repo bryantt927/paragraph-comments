@@ -1,0 +1,431 @@
+<?php
+use Symfony\Component\HttpFoundation\JsonResponse;
+//To do - you had the javascript loading in all first three functions in version Drupal 7.  Looks like you only need "attachments" function in 8, but if not loading, add to other two functions to test.  JS and CSS are in that same library.
+
+
+
+/**
+ * Implements hook_page_attachments().
+ */
+function paragraph_comments_page_attachments(array &$page) {
+
+  //$page['#attached']['library'][] = 'paragraph_comments/paragraph_comments';
+}
+
+//New way to pass variables to JS
+function paragraph_comments_page_attachments_alter(&$build){
+		global $base_url;
+		//$build['#attached']['library'][] = 'core/drupal.dialog.ajax';
+  		//$content['#attached']['library'][] = 'core/drupal.dialog.ajax';
+		//$build['#attached']['library'][] = 'paragraph_comments/paragraph_comments';
+		
+		$user = \Drupal::currentUser();
+		$build['#attached']['drupalSettings']['paragraph_comments']['paragraph_comments']['paragraph_comments_permissions'] = $user->hasPermission('post comments');
+		$build['#attached']['drupalSettings']['paragraph_comments']['paragraph_comments']['base_url'] = $base_url;
+		$build['#attached']['drupalSettings']['paragraph_comments']['paragraph_comments']['paragraph_comments_path'] = drupal_get_path('module', 'paragraph_comments');
+		//$build['#attached']['drupalSettings']['paragraph_comments']['paragraph_comments']['paragraph_comment_text'];
+		//$build['#attached']['drupalSettings']['paragraph_comments']['paragraph_comments']['paragraph_comment_text'] =  "hiii!";
+		$paragraph_comments_content_types = \Drupal::config('paragraph_comments.settings')->get('paragraph_comments_content_types');
+
+    
+	foreach ($paragraph_comments_content_types as $value) {
+	  //\Drupal::logger('paragraph_comments')->notice('Type is ' . $node->getType() . ' and value is ' . $value);
+  	  if ($node = \Drupal::routeMatch()->getParameter('node')) {
+    	if ($node->getType() === $value) {
+      	 $build['#attached']['drupalSettings']['paragraph_comments']['paragraph_comments']['boolean_current_content_type'] = TRUE;
+		 }else{
+		 $build['#attached']['drupalSettings']['paragraph_comments']['paragraph_comments']['boolean_current_content_type'] = TRUE;		 
+	    }
+      }
+	}
+}
+
+
+
+function paragraph_comments_preprocess_html(&$variables) {
+  //kint($variables);
+
+//\Drupal::logger('paragraph_comments')->notice('Variables' . $variables['page']['#cache']['tags']);
+
+//$variables['page']['#cache']['tags'] = null;
+  
+  
+  //$content['#attached']['library'][] = 'core/drupal.dialog.ajax';
+  //$variables['page']['#attached']['library'][] = 'modal/modal';
+
+ // $variables['page']['#attached']['library'][] = 'core/drupal.ajax';
+
+}
+
+//Just fetching author of node here, so can expose it page twig to create the Edit link.
+//Add this ugliness is because had to allow edit all on this content type so I could get the edit widget that includes the javascript I need.
+function paragraph_comments_preprocess_page(&$variables) {
+  //kint($variables['node']);
+  $username = '';
+  if (!is_null($variables['node'])) {
+    $uid = $variables['node']->getOwnerId();
+	//\Drupal::logger('paragraph_comments')->notice('VARS20 ' . $uid);
+	  $user = \Drupal\user\Entity\User::load($uid);
+      if (!is_null($user)) {
+	    $author = $user->getDisplayName();
+		$variables['author']  = $author;
+	  }
+  }
+}
+
+//this was paragraph_comments_preprocess_page in version 7
+function paragraph_comments_preprocess_node(&$variables) { 
+	
+	
+	//$variables['#attached']['library'][] = 'core/drupal.dialog.ajax';
+
+ /** 
+    $paragraph_comments_content_types = \Drupal::config('paragraph_comments.settings')->get('paragraph_comments_content_types');
+    kint($paragraph_comments_content_types);
+	foreach ($paragraph_comments_content_types as $value) {
+  	  if ($node = \Drupal::routeMatch()->getParameter('node')) {
+    	if ($node->getType() === $value) {
+     	 // Attach JavaScript to the page.
+		\Drupal::logger('paragraph_comments')->notice($value . ' equaled ' . $node->getType());
+      	$attachments['#attached']['library'][] = 'paragraph_comments/paragraph_comments';
+	}
+  }
+		//\Drupal::logger('paragraph_comments')->notice($value . ' test');
+	}
+ */
+
+}
+
+function paragraph_comments_node_view(array &$build, $node, $display, $view_mode) {
+  //$build['#attached']['library'][] = 'core/drupal.dialog.ajax';
+  //$content['#attached']['library'][] = 'core/drupal.dialog.ajax';
+  
+  //$paragraph_comments_content_types = \Drupal::config('paragraph_comments.settings')->get('paragraph_comments_content_types');
+  //I don't get why, but need this line below to have access to $node
+  $node = \Drupal::routeMatch()->getParameter('node');
+  $paragraph_comments_content_types = \Drupal::config('paragraph_comments.settings')->get('paragraph_comments_content_types');
+  foreach ($paragraph_comments_content_types as $value) {
+      if ($view_mode == 'full'  && $node->getType() == $value) {
+		//\Drupal::logger('paragraph_comments')->notice('In Node_View Found Content Type Type is ' . $node->getType() . ' and value is ' . $value);
+        //remove php code if has it
+       // $body_values  = field_get_items('node', $node, 'body');
+ 		$body_values = $node->getTranslation('en')->get('body')->getValue();
+		
+        $str_html = $body_values[0]['value'];
+        $str_html = str_replace('<div>', '<p>', $str_html);
+        $str_html = str_replace('</div>', '</p>', $str_html);
+        $str_remove_php = $str_html;
+        $str_php_string = '';
+        $php_found     = FALSE;
+        $pos_php_start  = strpos($str_remove_php, "<?php");
+        $pos2_php_start = strpos($str_remove_php, "<?PHP");
+        if ($pos_php_start === FALSE && $pos2_php_start === FALSE) {
+            //do nothing, $php_found false by default
+            
+        } 
+        elseif ($pos_php_start > 0) {
+            $php_found = TRUE;
+        } 
+        elseif ($pos2_php_start > 0) {
+            $php_found = TRUE;
+        }
+
+        
+        //Only add ids to string if no php code in content, otherwise may mess it up
+        if ($php_found == FALSE) {
+            foreach ($paragraph_comments_content_types as $value) {
+                //If current node type in array of admin selected content types for paragraph comments
+                //search through html code, find <p> tags.  If don't have paragraphCommentsID, then add and save to database.
+                if ($node->getType() === $value) {
+                    //node content to string variable
+                    $str_html = $body_values[0]['value'];
+                    // create the DOMDocument object, and load HTML from string
+                    $doc_html = new DOMDocument();
+                    $doc_html->loadHTML(mb_convert_encoding($str_html, 'HTML-ENTITIES', 'UTF-8'));
+                    // gets all paragraphs
+                    $prgs = $doc_html->getElementsByTagName('p');
+                    
+                    
+                    
+                    //find any paragraphs without paragraphCommentsID, add any without
+                    foreach ($prgs as $prg) {
+                        if ($prg->hasAttribute('paragraphcommentsid')) {
+                            //do nothing, already paragraphcommentsid
+                        } 
+                        else {
+                            //generate random number and assign to paragraph
+                            $rnd_id = rand(1000000, 9999999);
+                            $prg->setAttribute('paragraphcommentsid', $rnd_id);
+                            $prg->setAttribute('id', $rnd_id);
+                        }
+                    }
+//Begin duplicate section, we may not need this if fixed in PreSave
+                //WYSIWYG editors autopopulate new paragraph tags with attributes of previous tag, so we need to loop back through array and remove duplicates
+                // Take paragraphids from $prgs DOMNodeList of paragraphs and put in an array, then we'll search array for duplicates, reassign ids of dupes, and put back into DOMNodeList
+                $paragraphs = array();
+                $dups       = array();
+                
+                foreach ($prgs as $prg) {
+                    $paragraphs[] += $prg->getAttribute('paragraphcommentsid');
+                }
+                
+                //Now have the list in the array $paragraphs, find which id numbers are duplicates and put them in the array dups[]
+                foreach (array_count_values($paragraphs) as $val => $c) {
+                    if ($c > 1) {
+                        $dups[] = $val;
+                    }
+                }
+                
+                //so now have duplicates in dups[], since always took from the tag above, we want to find the keys that contain these values, but only replace the 
+                //the second instance or greater.  So $found will hold the first key, then we'll loop through paragraphs and replace any instances in the array
+                //where the key is greater than $found.
+                foreach ($dups as $dupe_id) {
+                    //$found has the key of the first instance of duplication
+                    $found = array_search($dupe_id, $paragraphs);
+                    if ($found !== FALSE) {
+						//\Drupal::logger('paragraph_comments')->notice('Found Duplicate View');
+                        //We found something, but we want the second and any later occurences, so where key is greater than $found, assign new random ID.
+                        foreach ($paragraphs as $k => $v) {
+                            if ($k > $found) {
+                                if ($paragraphs[$k] == $paragraphs[$found]) {
+                                    $paragraphs[$k] = rand(1000000, 9999999);
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                //everything now as it should be in $paragraphs, so loop through the $prgs DOMNodeList and reassign attribute to corresponding key in $paragraphs array.
+                $i = 0;
+                foreach ($prgs as $prg) {
+                    $prg->setAttribute('paragraphcommentsid', $paragraphs[$i]);
+                    $prg->setAttribute('id', $paragraphs[$i]);
+                    $i = $i + 1;
+                }
+ //End Duplicate part                   
+                    //Set our variables to be accessed in jQuery including that content type is a type with Paragraph Comments enabled
+                    //the current node type, the nid, and finally an array of paragraphs and their paragraphcommentid variable        
+					$build['#attached']['drupalSettings']['paragraph_comments']['paragraph_comments']['paragraph_comments_nid'] = $node->id();
+					$build['#attached']['drupalSettings']['paragraph_comments']['paragraph_comments']['paragraph_comments_content_type'] = $node->getType();
+                    foreach ($prgs as $prg) {
+                        $paragraph_comment_text[] = array(
+                            'pid' => $prg->getAttribute('paragraphcommentsid')
+                        );
+                        
+                    }
+                    //capture altered html and put into string					
+                    $str_html = $doc_html->saveHTML();
+
+					$build['#attached']['drupalSettings']['paragraph_comments']['paragraph_comments']['paragraph_comment_text'] = $paragraph_comment_text;
+					
+					
+                }
+            }
+
+
+			$node->body->format = 'full_html';
+			//$str_html = "Hey Todd";
+			$node->body->value = $str_html;
+			//$body_values[0]['value'] = $str_html;
+			
+			//$node->{$body}->setValue(['value' => $str_html, 'format' => 'full_html']); 
+			//kint($node);
+			//kint($str_html);
+            $node->save();
+			//$node->content['body'][0]['#markup'] = $str_html; 
+            return $node;
+        } //end if statement phpFound  
+    }
+  } //end foreach
+}
+
+function paragraph_comments_node_load($node) {
+  //$build['#attached']['library'][] = 'core/drupal.dialog.ajax';
+  //\Drupal::logger('paragraph_comments')->notice('In Node_Load');
+	//$str_html = "Hey Todd Load";
+	//$node->body->value = $str_html;
+}
+
+function paragraph_comments_node_update($node) {
+  //\Drupal::logger('paragraph_comments')->notice('In Node_Update');
+	//$str_html = "Hey Todd Update";
+	//$node->body->value = $str_html;
+}
+//Only reason for PreSave is that if editing and resaving, the node_view doesn't update the node->value->body.  So only need to do the part where it finds empty or duplicate <p>.  
+//Copied from node_view
+function paragraph_comments_node_presave($node) {
+  //\Drupal::logger('paragraph_comments')->notice('In Node_Presave');
+  $paragraph_comments_content_types = \Drupal::config('paragraph_comments.settings')->get('paragraph_comments_content_types');
+  foreach ($paragraph_comments_content_types as $value) {
+   // \Drupal::logger('paragraph_comments')->notice('LOOP PRESAVE Value is ' . $value);
+    if ($node->getType() === $value) {
+	// \Drupal::logger('paragraph_comments')->notice('In Node_Presave Found Content Type Type is ' . $node->getType() . ' and value is ' . $value);
+
+        $str_html = $node->body->value;
+		$doc_html = new DOMDocument();
+        $doc_html->loadHTML(mb_convert_encoding($str_html, 'HTML-ENTITIES', 'UTF-8'));
+        // gets all paragraphs
+        $prgs = $doc_html->getElementsByTagName('p');
+  //find any paragraphs without paragraphCommentsID, add any without
+                    foreach ($prgs as $prg) {
+                        if ($prg->hasAttribute('paragraphcommentsid')) {
+                            //do nothing, already paragraphcommentsid
+                        } 
+                        else {
+                            //generate random number and assign to paragraph
+                            $rnd_id = rand(1000000, 9999999);
+                            $prg->setAttribute('paragraphcommentsid', $rnd_id);
+                            $prg->setAttribute('id', $rnd_id);
+                        }
+                    }
+//Begin duplicate section, we may not need this if fixed in PreSave
+                //WYSIWYG editors autopopulate new paragraph tags with attributes of previous tag, so we need to loop back through array and remove duplicates
+                // Take paragraphids from $prgs DOMNodeList of paragraphs and put in an array, then we'll search array for duplicates, reassign ids of dupes, and put back into DOMNodeList
+                $paragraphs = array();
+                $dups       = array();
+                
+                foreach ($prgs as $prg) {
+                    $paragraphs[] += $prg->getAttribute('paragraphcommentsid');
+                }
+                
+                //Now have the list in the array $paragraphs, find which id numbers are duplicates and put them in the array dups[]
+                foreach (array_count_values($paragraphs) as $val => $c) {
+                    if ($c > 1) {
+                        $dups[] = $val;
+                    }
+                }
+                
+                //so now have duplicates in dups[], since always took from the tag above, we want to find the keys that contain these values, but only replace the 
+                //the second instance or greater.  So $found will hold the first key, then we'll loop through paragraphs and replace any instances in the array
+                //where the key is greater than $found.
+                foreach ($dups as $dupe_id) {
+                    //$found has the key of the first instance of duplication
+                    $found = array_search($dupe_id, $paragraphs);
+                    if ($found !== FALSE) {
+						//\Drupal::logger('paragraph_comments')->notice('Found Duplicate View');
+                        //We found something, but we want the second and any later occurences, so where key is greater than $found, assign new random ID.
+                        foreach ($paragraphs as $k => $v) {
+                            if ($k > $found) {
+                                if ($paragraphs[$k] == $paragraphs[$found]) {
+                                    $paragraphs[$k] = rand(1000000, 9999999);
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                //everything now as it should be in $paragraphs, so loop through the $prgs DOMNodeList and reassign attribute to corresponding key in $paragraphs array.
+                $i = 0;
+                foreach ($prgs as $prg) {
+                    $prg->setAttribute('paragraphcommentsid', $paragraphs[$i]);
+                    $prg->setAttribute('id', $paragraphs[$i]);
+                    $i = $i + 1;
+                }
+ //End Duplicate part
+
+
+     //capture altered html and put into string					
+     $str_html = $doc_html->saveHTML();
+	
+	//$str_html = "Hey Todd Update";
+	$node->body->value = $str_html;
+   //End if Node->Type == Content Type
+   }
+  //End For Each Content Type
+  }
+}
+
+/**
+ *Function to retrieve number of paragraph comments for each paragraph
+ */
+
+function paragraph_comments_get_comment_count($paragraphcommentid) {
+/**
+	\Drupal::logger('paragraph_comments')->notice('In Comment Count ' . $paragraphcommentid);
+	$output= "9";
+	return $output;
+
+    $count  = 0;
+    $query  = db_select('comment', 'c');
+    $result = $query->condition('paragraph_id', $paragraphcommentid)->fields('c', array(
+        'cid'
+    ))->execute();
+    $count  = $result->rowCount();
+    drupal_json_output($count);
+*/
+/**
+Old Way
+    $count  = 0;
+    $query  = db_select('comment', 'c');
+    $result = $query->condition('paragraph_id', $paragraphcommentid)->fields('c', array(
+        'cid'
+    ))->execute();
+    $count  = $result->rowCount();
+    drupal_json_output($count);
+*/
+	$count = 0;
+	$output = '';
+	//Now count the number of comments in comment__field_paragraph_id where paragraph_id column equals $paragraphcommmentid
+	$query = \Drupal::database()->select('comment__field_paragraph_id', 'cfpi');
+	$query->fields('cfpi', ['entity_id', 'field_paragraph_id_value']);
+	$query->condition('cfpi.field_paragraph_id_value', $paragraphcommentid); 
+	$count = $query->countQuery()->execute()->fetchField();
+	//foreach ($result as $record) {
+  	//	$output = $output . ' ' . $record->field_paragraph_id_value;
+	//}
+	return new JsonResponse($count);
+}
+ 
+
+function paragraph_comments_comment_insert($comment){
+  //so there is now a field for the comment type, is now in database field_paragraph_id_value in table comment__field_paragraph_id
+  //should we still use the extra column in the comment_field_data table?  Seems dumb to put in paragraph_id twice, but will make upgrade easier and keep flexibility to change machine 
+  //name of of the paragraph_id field in the comment type.
+
+  //Leave it out for now, but if want to put it in the column of the comment_field_data table, this is where it would go.
+  //\Drupal::logger('paragraph_comments')->notice('Hit NODE COMMENT INSERT '. $comment->get('field_paragraph_id')->value);
+}
+
+function paragraph_comments_get_comments($paragraphcommentid) {
+	global $base_url;
+    $output = '';
+	$str_comment_body = '';
+
+	//First get the entity ID for the commmentfrom the field_paragraph_id_value table for the paragraph ID that was clicked.
+	//The with the Entity_ID we can pull the body out from comment__comment_body  
+    $query = \Drupal::database()->select('comment__field_paragraph_id', 'cfpi');
+	$query->fields('cfpi', ['entity_id', 'field_paragraph_id_value']);
+	$query->condition('cfpi.field_paragraph_id_value', $paragraphcommentid); 
+	$result = $query->execute();
+	foreach ($result as $record) {
+		//we have each entity ID not in $record->entity_id, so as loop through get the body of the comment for each.
+		//need to do a join so we have fields from comment_field_data and comment__comment_body
+  		//\Drupal::logger('paragraph_comments')->notice('Entity ID is ' . $record->entity_id);
+		$query2 = \Drupal::database()->select('comment__comment_body', 'ccb');
+		$query2->fields('ccb', ['entity_id', 'comment_body_value']);
+		$query2->addField('cfd', 'cid');
+		$query2->addField('cfd', 'uid');
+		$query2->addField('cfd', 'name');
+		$query2->addField('cfd', 'subject');
+		$query2->addField('cfd', 'changed');
+		$query2->join('comment_field_data', 'cfd', 'cfd.cid = ccb.entity_id');
+		$query2->condition('ccb.entity_id', $record->entity_id);
+		$result2 = $query2->execute();
+			foreach ($result2 as $record2) {
+				//\Drupal::logger('paragraph_comments')->notice('BODY COMMENT is  ' . $record2->comment_body_value);
+				//\Drupal::logger('paragraph_comments')->notice('Author is  ' . $record2->name);
+				$str_comment_body .= "<a href='" . $base_url . "/user/" . $record2->uid . "'>" . $record2->name . "</a> &nbsp; &nbsp;| &nbsp; &nbsp;<b>" . $record2->subject . "&nbsp; &nbsp;| &nbsp; &nbsp;" . format_date($record2->changed) . "</br></b>" . $record2->comment_body_value . "</br></br>";
+
+			} 
+	}
+  
+  //return new JsonResponse('Hey Bob');
+  if ($str_comment_body != "") {
+        return new JsonResponse($str_comment_body);
+    } 
+    else {
+        return new JsonResponse("");
+    }
+
+}
+?>

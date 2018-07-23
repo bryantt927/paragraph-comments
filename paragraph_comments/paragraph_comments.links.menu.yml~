@@ -1,0 +1,13 @@
+paragraph_comments.admin:
+  title: 'Paragraph Comments module settings'
+  description: 'example of how to make an admin settings page link'
+  parent: system.admin_config_development
+  route_name: paragraph_comments.content
+  weight: 100
+
+paragraph_comments.settings_form:
+  title: 'ParagraphCommentsSettingsForm'
+  route_name: paragraph_comments.settings_form
+  description: 'A description for the menu entry Paragraph Comments'
+  parent: system.admin_config_system
+  weight: 99

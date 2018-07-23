@@ -1,0 +1,69 @@
+body{
+font-family:Verdana, Geneva, sans-serif;
+font-size:14px;}
+/*
+ *We're creating Div that appear and expand below each paragraph dynamically.  
+ *So add style to apply to all slidingDiv elements.  They'll have an ID number at end
+ */
+div.slidingDiv{
+  background-color: #ededed;
+  padding:20px;
+  margin:0 10px;
+  border-bottom: 1px solid #bbb;
+	border-left: 1px solid #bbb;
+	border-right: 1px solid #bbb;
+
+}
+#edit-comment-body-und-0-format{
+  display:none;
+}
+.paragraph-comments-buttons {
+	padding:10px 20px;
+	background: -webkit-linear-gradient(#fff, #ededed); /* For Safari 5.1 to 6.0 */
+	background: -o-linear-gradient(#fff, #ededed); /* For Opera 11.1 to 12.0 */
+	background: -moz-linear-gradient(#fff, #ededed); /* For Firefox 3.6 to 15 */
+	background: linear-gradient(#fff, #ededed); /* Standard syntax */
+	border-top: 1px solid #bbb;
+	border-left: 1px solid #bbb;
+	border-right: 1px solid #bbb;
+	display:block;
+	height:18px;
+	margin:5px 10px 0 10px;
+}
+.paragraph-comments-show {
+	float:left;
+	margin:0 10px 0 0;
+}
+.paragraph-comments-count p {
+	font-weight:bold;
+	float:left;
+	margin:0 10px 0 0;
+	line-height:normal;
+}
+
+.paragraph-comments-add-comment-perfect {
+float: left;
+margin-left: 25%;
+}
+
+.paragraph-comments-add-comment {
+	float:right;
+}
+.paragraph-comments-form {
+	width:200px;
+}
+div.field--name-field-paragraph-id {
+	display:none;
+}
+div.form-item-comment-body-0-format{
+	display:none;
+}
+/*
+ *Hide Quick Edit widget since we gave everyone edit permissons on content type that has paragraph comments enabled.  You can change the .contextual to just the content being use if you want.
+ */
+.contextual, .block-page-title-block .contextual {
+	display:none!important;
+}
+
+
+

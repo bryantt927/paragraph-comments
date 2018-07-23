@@ -1,0 +1,149 @@
+<?php
+
+namespace Drupal\paragraph_comments\Controller;
+
+use Drupal\Core\Controller\ControllerBase;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\DependencyInjection\ContainerInterface; 
+use Drupal\Core\Ajax\AjaxResponse; 
+use Drupal\Core\Ajax\OpenModalDialogCommand; 
+use Drupal\Core\Form\FormBuilder;
+
+
+class ParagraphCommentsController extends ControllerBase {
+
+  /**
+   * The form builder.
+   *
+   * @var \Drupal\Core\Form\FormBuilder
+   */
+  protected $formBuilder;
+
+  /**
+   * The ModalFormExampleController constructor.
+   *
+   * @param \Drupal\Core\Form\FormBuilder $formBuilder
+   *   The form builder.
+   */
+  public function __construct(FormBuilder $formBuilder) {
+    $this->formBuilder = $formBuilder;
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * @param \Symfony\Component\DependencyInjection\ContainerInterface $container
+   *   The Drupal service container.
+   *
+   * @return static
+   */
+  public static function create(ContainerInterface $container) {
+    return new static(
+      $container->get('form_builder')
+    );
+  }
+
+  /**
+   * Callback for opening the modal form for a correction.
+   */
+  public function openParagraphCommentModalForm($nodeid, $paragraphcommentid, $contenttype, $paragraphtext) {
+  //\Drupal::logger('paragraph_comments')->notice('Paragraph text is ###' . $paragraphtext);
+  //We had replaced question marks and quotes in the javascript so as to not break query string.  Put them back.
+  $paragraphtext = str_replace("esc_forward_slash", "/", $paragraphtext);
+  $paragraphtext = str_replace("esc_quote", '"', $paragraphtext);
+  //create comment array, need to create comment array to create the form.  Comment form is different since it's just a field on content type.
+  $values = array(
+    'entity_type' => 'node',
+    'entity_id' => $nodeid,
+    //VERY IMPORTANT TODD - this is the machine name of the comment field you add to whichever content type using for corrections.  See README file.
+    'field_name' => 'field_corrections',
+    'comment_type' => 'comment',
+	'subject' => 'Correction',
+    'comment_body' => $paragraphtext,
+	'field_paragraph_id' => $paragraphcommentid,
+    );
+  $comment = \Drupal::entityTypeManager()->getStorage('comment')->create($values);
+  
+  $form = \Drupal::service('entity.form_builder')->getForm($comment);
+  
+  //$form = render($form);
+  //$form['#attached']['library'][] = 'core/drupal.dialog.ajax';
+  //$form['body']['#default_value'] = "HI";
+  $response = new AjaxResponse();
+
+  // Get the modal form using the form builder.
+  //$content['#attached']['library'][] = 'core/drupal.dialog.ajax';
+/*
+  $form['#attached']['library'][] = 'core/drupal.dialog.ajax';
+   $form['actions'] = array('#type' => 'actions');
+    $form['actions']['send'] = [
+      '#type' => 'submit',
+      '#value' => $this->t('Submit modal form'),
+      '#attributes' => [
+        'class' => [
+          'use-ajax',
+        ],
+      ],
+      '#ajax' => [
+        'callback' => [$this, 'submitParagraphCommentModalFormAjax'],
+        'event' => 'click',
+      ],
+    ];
+**/
+  //put a class in here somehow for modal form
+
+  $response->addCommand(new OpenModalDialogCommand('Corrections', $form, ['width' => '800']));
+  return $response;
+
+  }
+
+  /**
+   * Callback for opening the modal form for a perfect paragraph.
+   */
+  public function openPerfectParagraphCommentModalForm($nodeid, $paragraphcommentid, $contenttype, $paragraphtext) {
+  //\Drupal::logger('paragraph_comments')->notice('In Perfect Paragraph');
+  //create comment array, need to create comment array to create the form.  Comment form is different since it's just a field on content type.
+  $values = array(
+    'entity_type' => 'node',
+    'entity_id' => $nodeid,
+    //VERY IMPORTANT TODD - this is the machine name of the comment field you add to whichever content type using for corrections.  See README file.
+    'field_name' => 'field_corrections',
+    'comment_type' => 'comment',
+	'subject' => 'Perfect Paragraph!',
+    'comment_body' => 'Congratulations, I think this paragraph is perfect',
+	'field_paragraph_id' => $paragraphcommentid,
+    );
+  $comment = \Drupal::entityTypeManager()->getStorage('comment')->create($values);
+  
+  $form = \Drupal::service('entity.form_builder')->getForm($comment);
+  //$form['body']['#default_value'] = "HI";
+  $response = new AjaxResponse();
+  // Get the modal form using the form builder.
+
+  $response->addCommand(new OpenModalDialogCommand('Corrections', $form, ['width' => '800']));
+  return $response;
+
+  }
+
+
+
+  public function getParagraphCount($paragraphcommentid) {
+	
+	$type = 'notice';
+	$custom_arg = NULL;
+  	$method = $_SERVER['REQUEST_METHOD'];
+	//called only when the annotations are created
+	$result = paragraph_comments_get_comment_count($paragraphcommentid);
+    return $result;
+  }
+
+  public function getComments($paragraphcommentid) {
+	
+	$type = 'notice';
+	$custom_arg = NULL;
+  	$method = $_SERVER['REQUEST_METHOD'];
+	//called only when the annotations are created
+	$result = paragraph_comments_get_comments($paragraphcommentid);
+    return $result;
+  }
+}

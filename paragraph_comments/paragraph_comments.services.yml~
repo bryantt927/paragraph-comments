@@ -1,0 +1,5 @@
+services:
+  paragraph_comments_event_subscriber:
+    class: Drupal\paragraph_comments\EventSubscriber\MymoduleSubscriber
+    tags:
+      - {name: event_subscriber}

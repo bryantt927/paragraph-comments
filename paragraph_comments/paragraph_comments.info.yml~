@@ -1,0 +1,9 @@
+name: Paragraph Comments Module
+description: Allows comments per paragraph on selected content types\s
+package: Custom
+configure: paragraph_comments.admin_settings
+
+type: module
+core: 8.x
+dependencies:
+  - drupal.dialog.ajax

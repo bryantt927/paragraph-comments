@@ -1,0 +1,14 @@
+<?php
+/**
+ * @file
+ * Contains Drupal\paragraph_comments\Form\ParagraphCommentForm.
+ */
+namespace Drupal\paragraph_comments\Form;
+use Drupal\Core\Form\ConfigFormBase;
+use Drupal\Core\Form\FormStateInterface;
+/**
+ * Class SettingsForm.
+ *
+ * @package Drupal\paragraph_comments\Form
+ */
+
